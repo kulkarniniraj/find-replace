@@ -26,6 +26,7 @@ class File:
     active: bool
 
     def toggle_sel(self):
+        self.active = not self.active
         for c in self.candidates:
             c.toggle_sel()
         
@@ -40,6 +41,7 @@ class Folder:
     active: bool
         
     def toggle_sel(self):
+        self.active = not self.active
         for c in self.contents:
             c.toggle_sel()
 
@@ -63,8 +65,8 @@ def process_file(f: Path, search: str, replace: str) -> Result[File, str]:
         lines = txt.split('\n')
         rlines = [re.sub(search, replace, line) for line in lines]
         diff = filter(lambda tup: tup[1] != tup[2], zip(range(1, len(lines) + 1), lines, rlines))
-        candidates = [Candidate(d[0], d[1], d[2], False) for d in diff]
-        return Ok(File(f.name, f, '', candidates, False))
+        candidates = [Candidate(d[0], d[1], d[2], True) for d in diff]
+        return Ok(File(f.name, f, '', candidates, True))
     except Exception as e:
         return Err(str(e))
 

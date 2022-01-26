@@ -1,27 +1,19 @@
 import urwid
 from pathlib import Path
 import easydict as ed
+from typing import List
 
 import findlib
+import utils
+from utils import eprint
+from ui import ContentFile, ContentText, MyEdit, MyListBox
 
 STATE = ed.EasyDict()
-
-def eprint(*args):
-    with open('log.txt', 'a') as f:
-        for arg in args:
-            f.write(f'{str(arg)}\n')
-
-class MyEdit(urwid.Edit):
-    def keypress(self, size, key):
-        if key == 'esc':
-             raise urwid.ExitMainLoop()
-        return super().keypress(size, key)
-
 
 class InitialScreen:
     class MyListBox(urwid.ListBox):
         def keypress(self, size, key):
-            eprint('got key', key)
+            # eprint('got key', key)
             if key == 'enter':
                 r = findlib.find(Path('.'), '', 'import', 'export')
                 STATE.loop.widget = ResultScreen(r).build()
@@ -46,54 +38,48 @@ class InitialScreen:
         return frm
 
 class ResultScreen:
-    class MyListBox(urwid.ListBox):
-        def keypress(self, size, key):
-            eprint('got key', key)
-            if key == 'esc':
-                STATE.loop.widget = InitialScreen().build()
-                # raise urwid.ExitMainLoop()
-            return super().keypress(size, key)
-
     def __init__(self, fol: findlib.Folder):
         self.folder = fol
 
     def build_row(self, candidate: findlib.Candidate)->urwid.Widget:
-        return urwid.Columns([
-            ('weight', 1, urwid.Text('*')),
-            ('weight', 1, urwid.Text('1.')),
-            ('weight', 10, urwid.Text(('orig', candidate.match) ) ),
-            ('weight', 10, urwid.Text([('diff', candidate.replace)] ) )
-        ]) 
+        # return CAttrMap(ContentText(candidate), 'def')
+        return ContentText(candidate, 'def')
 
-    def build_file(self, fil: findlib.File) -> urwid.Widget:
-        w1 = urwid.Text(f'{fil.path}')
-        w1 = urwid.AttrMap(w1, 'header')
-        _w2 = [self.build_row(cand) for cand in fil.candidates]
-        w2 = urwid.Pile(_w2)
-        return urwid.Pile([w1, w2])
+    def build_file(self, fil: findlib.File) -> List[urwid.Widget]:
+        lst = [
+            ContentFile(fil, 'def'),
+            *[self.build_row(cand) for cand in fil.candidates]
+            ]
+
+        # eprint('build file lst', lst)
+        return lst
 
     def build(self):
-        palette = [
-                ('orig', 'dark red', 'default'),
-                ('diff', 'dark green', 'default'),
-                ('active', 'black', 'light gray'),
-                ('header', 'default', 'dark magenta')
-                ]
+        widgets = []
+        for fil in self.folder.contents:
+            widgets.extend(ContentFile(fil, 'def', children=fil.candidates)
+                    .get_widgets())
+        lst = MyListBox(widgets)
+        # w = ContentFile(fil, 'def')
+        # lst = MyListBox(
 
-        STATE.loop.screen.register_palette(palette)
-        # w2 = urwid.AttrMap(w2, 'active')
-        return self.MyListBox([self.build_file(fil) for fil in self.folder.contents])
-        # return urwid.Pile([self.build_file(fil) for fil in self.folder.contents])
+        frm = lst
+        frm = urwid.LineBox(frm)
+        return frm
 
 def main():
-    loop = urwid.MainLoop(InitialScreen().build())
+    loop = urwid.MainLoop(InitialScreen().build(), palette=[
+        ('def', 'default', 'default'),
+        ('orig', 'dark red', 'default'),
+        ('orig_f', 'dark red', 'dark gray'),
+        ('repl', 'light green', 'default'),
+        ('repl_f', 'light green', 'dark gray'),
+        ('hl', 'default', 'dark gray'),
+        ('file', 'default', 'light blue'),
+        ('file_f', 'default', 'dark blue'),
+        ])
     STATE.loop = loop
-    STATE.cols, STATE.rows = loop.screen.get_cols_rows()
-    eprint('state', STATE)
     loop.run()
 
-
 if __name__ == '__main__':
-    f = findlib.find(Path('.'), 'py$', 'urwid', 'mywid')
-    # print(f)
     main()
