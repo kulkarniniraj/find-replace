@@ -14,8 +14,7 @@ class MyEdit(urwid.Edit):
 class ContentFile(urwid.AttrMap):
     def __init__(self, file: findlib.File, *args, 
             children: List[findlib.Candidate] = []):
-        self.w = _ContentFile(file)
-        self.children = [ContentText(cand, 'def') for cand in children]
+        self.w = _ContentFile(file, children)
         super().__init__(self.w, *args)
 
     def render(self, size, focus):
@@ -27,15 +26,16 @@ class ContentFile(urwid.AttrMap):
         return super().render(size, focus)
 
     def get_widgets(self) -> List[urwid.Widget]:
-        return [self, *self.children]
+        return [self, *self.w.children]
 
 class _ContentFile(urwid.Columns):
-    def __init__(self, file: findlib.File):
+    def __init__(self, file: findlib.File, children: List[findlib.Candidate]):
         from urwid import Text
         self.file = file
         # eprint('file active', file.active)
         self.sel_txt = Text(utils.get_select_text(file.active))
         self.fpath = Text(str(file.path))
+        self.children = [ContentText(cand, 'def') for cand in children]
         super().__init__([
             ('weight', 1, self.sel_txt), 
             ('weight', 25, self.fpath)] )
@@ -51,21 +51,23 @@ class _ContentFile(urwid.Columns):
 
     def refresh(self):
         self.sel_txt.set_text(utils.get_select_text(self.file.active))
+        for w in self.children:
+            w.refresh()
 
     def keypress(self, size, key):
         # eprint('column', key)
         if key == ' ':
             # self.sel_txt.set_text(f'[{"*" if self.sel else " "}]')
-            eprint('file active before toggle', self.file.active)
+            # eprint('file active before toggle', self.file.active)
             self.file.toggle_sel()
-            eprint('file active after toggle', self.file.active)
+            # eprint('file active after toggle', self.file.active)
             self.refresh()
         else:
             return key
 
 class ContentText(urwid.AttrMap):
     def __init__(self, cand: findlib.Candidate, *args):
-        eprint('ctxtext args', cand, *args)
+        # eprint('ctxtext args', cand, *args)
         self.w = _ContentText(cand)
         super().__init__(self.w, *args)
 
@@ -76,6 +78,9 @@ class ContentText(urwid.AttrMap):
              self.set_attr_map({None: 'def'})                                  
 
         return super().render(size, focus)
+
+    def refresh(self):
+        self.w.refresh()
 
 class _ContentText(urwid.Columns):
     def __init__(self, cand: findlib.Candidate):

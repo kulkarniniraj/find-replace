@@ -2,6 +2,7 @@ import urwid
 from pathlib import Path
 import easydict as ed
 from typing import List
+import time
 
 import findlib
 import utils
@@ -55,16 +56,20 @@ class ResultScreen:
         return lst
 
     def build(self):
+        t1 = time.time()
         widgets = []
         for fil in self.folder.contents:
             widgets.extend(ContentFile(fil, 'def', children=fil.candidates)
                     .get_widgets())
+        t2 = time.time()
         lst = MyListBox(widgets)
-        # w = ContentFile(fil, 'def')
-        # lst = MyListBox(
+        t3 = time.time()
 
         frm = lst
         frm = urwid.LineBox(frm)
+        t4 = time.time()
+        # eprint('build time', t2-t1, t3-t1, t4-t1)
+
         return frm
 
 def main():
