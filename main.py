@@ -13,6 +13,9 @@ STATE = ed.EasyDict()
 
 class InitialScreen:
     class MyListBox(urwid.ListBox):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
         def keypress(self, size, key):
             eprint('got key', key)
             if key == 'enter':
@@ -50,6 +53,7 @@ class InitialScreen:
         frm = urwid.Padding(frm, urwid.CENTER, ('relative', 70)) 
         frm = urwid.Filler(frm, height = 15) 
         frm = urwid.LineBox(frm)
+        STATE.init_screen = frm
         return frm
 
 class ResultScreen:
@@ -61,6 +65,10 @@ class ResultScreen:
         def keypress(self, size, key):
             if key == 'enter':
                 self.enter()
+            elif key == 'esc':
+                STATE.loop.widget = InitialScreen().build()
+            elif key == 'backspace':
+                STATE.loop.widget = STATE.init_screen
             else:
                 return super().keypress(size, key)
 
@@ -68,7 +76,8 @@ class ResultScreen:
         self.folder = fol
 
     def apply_change(self, _):
-        pass
+        findlib.replace(Path('.'), self.folder)
+        STATE.loop.widget = self.bg
 
     def discard_change(self, _):
         STATE.loop.widget = self.bg
